@@ -1,13 +1,4 @@
 
-#target1{
-    background-color: red;
-    width: 0px;
-    height: 0px;
-    display: inline-block;
-    border-radius: 50%;
-    position: absolute;
-}
-
 
 #stopBtn{
     display: none;
