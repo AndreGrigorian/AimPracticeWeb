@@ -1,37 +1,48 @@
-var startBtn = document.getElementById("startBtn");
-var stopBtn = document.getElementById("stopBtn");
-var target = document.getElementById("target1");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+var time = 10;//in seconds
 var timerOn = false;
-
+var allTargets = [];
 
 var targetClicked = 0;
 var misClicks = 0; 
 
+
 document.addEventListener('click', function(e) {
     e = e || window.event;
-    var target = e.target || e.srcElement,
-        text = target.textContent || target.innerText;  
-    console.log(target.id) 
+    var elem = e.target, 
+        text = elem.textContent || elem.innerText;  
+    
+    if(timerOn && elem.id.includes("target")){
+        var currTarget = document.getElementById(elem.id);
+        relocateTarget(currTarget); 
+        targetClicked++;
+        misClicks--;
+        var sound = new Audio("audio/hitSound.mp3");
+        sound.play();
+    }
+    
 }, false);
 
 
+
 startBtn.addEventListener("click", function(){
-    resetScreen();
+    
+    document.getElementById("results").style.display = "none";
     timerOn = true;
-    var time = 30;
     var deadline = Date.parse(new Date()) + (time*1000)
     initializeClock('clockdiv', deadline);
     stopBtn.style.display = "block";
     startBtn.style.display = "none";
-    getRandomTarget()
-    console.log(misClicks);
+    createTargets(5);
+
+    
+
 });
-
-
 
 stopBtn.addEventListener("click", function(){
     misClicks--;
-    resetScreen();
+    clearTargets();
 });
 
 document.addEventListener("click", function(){
@@ -39,16 +50,21 @@ document.addEventListener("click", function(){
 });
 
 
-    
-target.addEventListener("click", function(){
-    targetClicked++;
-    misClicks--;
-    getRandomTarget();
-});
+function createTargets(num){
+    for(var i =0; i< num; i++){
+        var newTarget = document.createElement("span");
+        newTarget.style.borderRadius = "50%";
+        newTarget.style.display = "inline-block";
+        newTarget.style.position = "absolute";
+        newTarget.id = "target" + i;
+        allTargets.push(newTarget);
+        document.body.insertBefore(newTarget, document.getElementById("timeContainer"));
+        relocateTarget(newTarget);
+    }
+}
 
 
-
-function getRandomTarget(){
+function relocateTarget(elem){
     var maxTargetSize = 120;
     var minTargetSize = 40;
     var margin = 100;
@@ -56,25 +72,36 @@ function getRandomTarget(){
     var windowH = window.innerHeight;
     var windowW = window.innerWidth;
     
-    target.style.left = Math.floor(Math.random() * (windowW-margin-maxTargetSize) + margin);
-    target.style.top = Math.floor(Math.random() * (windowH-margin-maxTargetSize) + margin);
+    elem.style.left = Math.floor(Math.random() * (windowW-margin-maxTargetSize) + margin);
+    elem.style.top = Math.floor(Math.random() * (windowH-margin-maxTargetSize) + margin);
     var randomSize = Math.floor(Math.random() * (maxTargetSize - minTargetSize) + minTargetSize);
-    target.style.width = randomSize;
-    target.style.height = randomSize;
-    const randomColor = Math.floor(Math.random()*16777215).toString(16);
-    target.style.backgroundColor = "#" + randomColor;
+    elem.style.width = randomSize;
+    elem.style.height = randomSize;
+    var randomColor = Math.floor(Math.random()*16777215).toString(16);
+    elem.style.backgroundColor = "#" + randomColor;
 
 }
 
-function resetScreen(){
-    document.getElementById("results").style.display = "none";
-    timerOn = false;
-    target.style.width = 0;
-    target.style.width = 0;
-    stopBtn.style.display = "none";
-    startBtn.style.display = "block";
-    targetClicked = 0;
-    misClicks = 0;
+
+
+
+function getResults(){
+    misClicks--;
+
+    document.getElementById("results").style.display = "block";
+    var accuracyTxt = document.getElementById("accuracy");
+    var targetsTxt = document.getElementById("targetsClicked");
+    var missed = document.getElementById("targetsMissed");
+    
+
+    // var accuracy = ((targetClicked >= misClicks) && (targetClicked!= 0 && misClicks!=0) ? 
+    //     Math.floor(((targetClicked-misClicks)/targetClicked) * 100) : 0 );
+    var accuracy = (targetClicked/(targetClicked + misClicks)) * 100;
+    
+    accuracyTxt.innerHTML = "Accuracy: " + accuracy.toFixed(2)  + "%";
+    targetsTxt.innerHTML = "Targets Hit: " + targetClicked;
+    missed.innerHTML = "Targets Missed: " + misClicks;
+
 }
 
 function getTimeRemaining(endtime){
@@ -93,40 +120,43 @@ function getTimeRemaining(endtime){
     };
 }
 
-function getResults(){
-    misClicks--;
-    console.log(targetClicked);
-    console.log(misClicks);
 
-    document.getElementById("results").style.display = "block";
-    var accuracyTxt = document.getElementById("accuracy");
-    var targetsTxt = document.getElementById("targetsClicked");
-    var missed = document.getElementById("targetsMissed");
-    
-    var accuracy = Math.floor(((targetClicked-misClicks)/targetClicked) * 100);
-    accuracyTxt.innerHTML = "Accuracy: " + accuracy + "%";
-    targetsTxt.innerHTML = "Targets Hit: " + targetClicked;
-    missed.innerHTML = "Targets Missed: " + misClicks;
-
+function clearTargets(){
+    for(var i =0; i< allTargets.length;i++){
+        allTargets[i].remove();
+    }
+    targetClicked = 0;
+    misClicks = 0;
+    allTargets = [];
+    timerOn = false;
+    stopBtn.style.display = "none";
+    startBtn.style.display = "block";
 }
 
 function initializeClock(id, endtime) {
     const clock = document.getElementById(id);
+    //every 1/10 of the time a random target will relocate
+    var intervalTime = (time >= 10 ? Math.floor(time/10) : time);
+
+
     const timeinterval = setInterval(() => {
       const t = getTimeRemaining(endtime);
       clock.innerHTML =   t.minutes + ':' + t.seconds;
       if(timerOn){//start clicked
+        if((t.total)/1000 % intervalTime == 0){
+            var randomTarget = Math.floor(Math.random() * allTargets.length);
+            relocateTarget(allTargets[randomTarget]);
+            
+            console.log(t.total);
+        }
+
         if (t.total <= 0) {
             clearInterval(timeinterval);
             clock.innerHTML = "Times Up";
+            
             //show results
             getResults();
-
-            timerOn = false;
-            target.style.width = 0;
-            target.style.width = 0;
-            stopBtn.style.display = "none";
-            startBtn.style.display = "block";
+            clearTargets();
             
         }
       }else{//stop clicked
